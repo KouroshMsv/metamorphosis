@@ -100,7 +100,7 @@ class Metamorphosis(private val builder: Builder) {
     fun installAPK( file: File) {
         val intent = Intent(Intent.ACTION_VIEW)
         val fileUri = FileProvider.getUriForFile(
-            builder.activity,   builder.activity.applicationContext.packageName.toString() + ".provider", file
+            builder.activity,   builder.activity.applicationContext.packageName.toString() + ".metamorphosisProvider", file
         )
         intent.setDataAndType(fileUri, "application/vnd.android.package-archive")
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
