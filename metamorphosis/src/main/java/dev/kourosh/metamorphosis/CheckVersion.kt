@@ -39,6 +39,7 @@ internal class CheckVersion(private val url: String) : AsyncTask<Unit, Unit, Def
                             )
                         }
                     }
+                    response.body?.close()
                 }
             })
 
