@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.util.concurrent.TimeUnit
 
-class Metamorphosis(private val builder: Builder) {
+class Metamorphosis(val builder: Builder) {
 
 
     var downloadListener: OnDownloadListener? = null
