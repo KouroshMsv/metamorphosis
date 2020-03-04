@@ -52,8 +52,8 @@ class Metamorphosis(val builder: Builder) {
     }
 
     fun startDownload(apkUrl: String) {
-        try {
-            GlobalScope.launch(Dispatchers.IO) {
+        GlobalScope.launch(Dispatchers.IO) {
+            try {
 
                 builder.run {
                     if (!apkName.contains(".apk")) {
@@ -67,6 +67,7 @@ class Metamorphosis(val builder: Builder) {
                         .setDescription(notificationConfig.description)
                         .setNotificationVisibility(notificationConfig.notificationVisibility)
                         .setDestinationUri(Uri.fromFile(file))
+                        .setMimeType("application/vnd.android.package-archive")
 
                     val downloadManager =
                         activity.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager?
@@ -84,21 +85,28 @@ class Metamorphosis(val builder: Builder) {
                             cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
                         val percent = ((bytesDownloaded * 100L) / bytesTotal).toInt()
                         if (percent != lastPercent) {
-                            downloadingListener?.downloading(percent)
+
+                            launch(Dispatchers.Main){
+                                downloadingListener?.downloading(percent)
+                            }
                             lastPercent = percent
                         }
                         if (cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)) == DownloadManager.STATUS_SUCCESSFUL) {
                             downloading = false
-                            downloadListener?.onFinished(file)
+                            launch(Dispatchers.Main){
+                                downloadListener?.onFinished(file)
+                            }
                         }
                         cursor.close()
                     }
                 }
-            }
 
-        } catch (e: Exception) {
-            Log.w(TAG, e)
-            downloadListener?.onFailed("fail to download", null)
+            } catch (e: Exception) {
+                Log.w(TAG, e)
+                launch(Dispatchers.Main){
+                    downloadListener?.onFailed("fail to download", null)
+                }
+            }
         }
     }
 
