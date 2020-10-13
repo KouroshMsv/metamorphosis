@@ -1,15 +1,16 @@
 package dev.kourosh.metamorphosis
 
-import android.os.AsyncTask
 import android.util.Log
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.Deferred
 import okhttp3.*
 import java.io.IOException
 
-internal class CheckVersion(private val url: String) : AsyncTask<Unit, Unit, Deferred<Result<String>>>() {
-    private var client = OkHttpClient()
-    override fun doInBackground(vararg p0: Unit?): Deferred<Result<String>> {
+internal object VersionChecker {
+
+    private var client = OkHttpClient().newBuilder()
+        .build()
+
+    suspend fun check(url: String): Result<String> {
         val deferred = CompletableDeferred<Result<String>>()
         try {
             val request: Request = Request.Builder()
@@ -46,6 +47,7 @@ internal class CheckVersion(private val url: String) : AsyncTask<Unit, Unit, Def
 
         } catch (e: Exception) {
             Log.w(TAG, e)
+            e.printStackTrace()
             deferred.complete(
                 Result.Error(
                     e.message ?: e.localizedMessage ?: e.cause.toString(),
@@ -53,8 +55,7 @@ internal class CheckVersion(private val url: String) : AsyncTask<Unit, Unit, Def
                 )
             )
         }
-        return deferred
-
+        return deferred.await()
     }
 
 }

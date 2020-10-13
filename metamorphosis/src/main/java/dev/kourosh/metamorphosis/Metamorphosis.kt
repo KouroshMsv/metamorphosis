@@ -11,10 +11,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.io.File
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.ReentrantLock
 
 class Metamorphosis(val builder: Builder) {
-
+    private val coroutineScope = GlobalScope
+    private val sharedLock = ReentrantLock()
 
     var downloadListener: OnDownloadListener? = null
     private var downloadingListener: OnDownloadingListener? = null
@@ -26,25 +27,33 @@ class Metamorphosis(val builder: Builder) {
             }
         }
     }
+    var downloading = false
 
     fun checkVersion(checkVersionListener: OnCheckVersionListener) {
-        GlobalScope.launch(Dispatchers.IO) {
-            when (val res = CheckVersion(builder.versionCheckerUrl).execute()
-                .get(builder.timeOut, TimeUnit.MILLISECONDS).await()) {
-                is Result.Success -> {
-                    launch(Dispatchers.Main) {
-                        checkVersionListener.onSucceed(res.data)
-                    }
-                }
-                is Result.Error -> {
-                    launch(Dispatchers.Main) {
-                        checkVersionListener.onFailed(res.message, res.code)
-                    }
-                }
-                else -> {
-                    launch(Dispatchers.Main) {
-                        checkVersionListener.onFailed("Time out", null)
 
+        if (downloading) {
+            checkVersionListener.onFailed("downloading file", null)
+        } else {
+            downloading = true
+            GlobalScope.launch(Dispatchers.IO) {
+                when (val res = VersionChecker.check(builder.versionCheckerUrl)) {
+                    is Result.Success -> {
+                        launch(Dispatchers.Main) {
+                            checkVersionListener.onSucceed(res.data)
+                            downloading = false
+                        }
+                    }
+                    is Result.Error -> {
+                        launch(Dispatchers.Main) {
+                            checkVersionListener.onFailed(res.message, res.code)
+                            downloading = false
+                        }
+                    }
+                    else -> {
+                        launch(Dispatchers.Main) {
+                            checkVersionListener.onFailed("Time out", null)
+                            downloading = false
+                        }
                     }
                 }
             }
@@ -52,9 +61,8 @@ class Metamorphosis(val builder: Builder) {
     }
 
     fun startDownload(apkUrl: String) {
-        GlobalScope.launch(Dispatchers.IO) {
+        coroutineScope.launch(Dispatchers.IO) {
             try {
-
                 builder.run {
                     if (!apkName.contains(".apk")) {
                         apkName += ".apk"
@@ -86,14 +94,14 @@ class Metamorphosis(val builder: Builder) {
                         val percent = ((bytesDownloaded * 100L) / bytesTotal).toInt()
                         if (percent != lastPercent) {
 
-                            launch(Dispatchers.Main){
+                            launch(Dispatchers.Main) {
                                 downloadingListener?.downloading(percent)
                             }
                             lastPercent = percent
                         }
                         if (cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)) == DownloadManager.STATUS_SUCCESSFUL) {
                             downloading = false
-                            launch(Dispatchers.Main){
+                            launch(Dispatchers.Main) {
                                 downloadListener?.onFinished(file)
                             }
                         }
@@ -103,7 +111,7 @@ class Metamorphosis(val builder: Builder) {
 
             } catch (e: Exception) {
                 Log.w(TAG, e)
-                launch(Dispatchers.Main){
+                launch(Dispatchers.Main) {
                     downloadListener?.onFailed("fail to download", null)
                 }
             }

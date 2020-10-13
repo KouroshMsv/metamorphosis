@@ -7,8 +7,8 @@ import android.os.Environment
 data class Builder(
     val activity: Activity,
     val versionCheckerUrl: String,
-    var apkName: String = "new version.apk",
-    val dir: String = Environment.getExternalStorageDirectory()!!.absolutePath + "/",
+    var apkName: String = "new version2.apk",
+    val dir: String = activity.baseContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)!!.absolutePath + "/",
     val timeOut: Long = 10000L,
     val notificationConfig: NotificationConfig = NotificationConfig(
         apkName.replace(".apk", ""),
